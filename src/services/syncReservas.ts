@@ -1,3 +1,10 @@
+export async function syncReservas(reservas: Reserva[]) {
+  console.log("🔎 Entró a syncReservas con reservas:", reservas);  // 👈 cartel de prueba
+
+  if (!reservas || reservas.length === 0) {
+    console.warn("⚠️ No hay reservas para sincronizar");
+    return;
+  }
 import { googleSheets } from "../services/googleSheets";
 import { SPREADSHEET_CONFIG } from "../config/google";
 import { Reserva, CANCHAS } from "../types";

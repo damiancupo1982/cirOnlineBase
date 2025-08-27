@@ -1,5 +1,6 @@
 import { Reserva } from '../types';
-import { cajaStorage } from './caja';   // 👈 agregado acá
+import { cajaStorage } from './caja';
+import { syncReservas } from '../utils/syncReservas'; // 👈 función que escribe TODAS las reservas en Sheets
 
 const STORAGE_KEY = 'circulo-sport-reservas';
 
@@ -28,7 +29,7 @@ export const reservasStorage = {
     return this.getAll().find(r => r.id === id) || null;
   },
 
-  save(reserva: Reserva): void {
+  async save(reserva: Reserva): Promise<void> {
     try {
       const reservas = this.getAll();
       const existingIndex = reservas.findIndex(r => r.id === reserva.id);
@@ -40,19 +41,29 @@ export const reservasStorage = {
       }
       
       localStorage.setItem(STORAGE_KEY, JSON.stringify(reservas));
+
+      // 🚀 Sincronizar TODO el listado a Google Sheets
+      await syncReservas(reservas);
+      console.log("✅ Reservas sincronizadas automáticamente con Google Sheets");
+
     } catch (error) {
       console.error('Error saving reserva:', error);
       throw error;
     }
   },
 
-  delete(id: string): void {
+  async delete(id: string): Promise<void> {
     try {
       // Eliminar también las transacciones de caja relacionadas
       cajaStorage.deleteByReservaId(id);
 
       const reservas = this.getAll().filter(r => r.id !== id);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(reservas));
+
+      // 🚀 Sincronizar TODO el listado a Google Sheets después de borrar
+      await syncReservas(reservas);
+      console.log("🗑️ Reserva eliminada y hoja de Google Sheets actualizada");
+
     } catch (error) {
       console.error('Error deleting reserva:', error);
       throw error;

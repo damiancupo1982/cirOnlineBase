@@ -2,13 +2,13 @@ import { googleSheets } from "../services/googleSheets";
 import { SPREADSHEET_CONFIG } from "../config/google";
 import { Reserva, CANCHAS } from "../types";
 
-// Función auxiliar: buscar nombre de cancha
+// 🔎 Busca el nombre de la cancha
 function getNombreCancha(canchaId: string): string {
   const cancha = CANCHAS.find(c => c.id === canchaId);
   return cancha ? cancha.nombre : canchaId;
 }
 
-// 🚀 Sincronizar reservas a Google Sheets con nuevo formato
+// 🚀 Sincroniza TODAS las reservas (sobrescribe la hoja completa)
 export async function syncReservas(reservas: Reserva[]) {
   if (!reservas || reservas.length === 0) {
     console.warn("⚠️ No hay reservas para sincronizar");
@@ -17,7 +17,7 @@ export async function syncReservas(reservas: Reserva[]) {
 
   try {
     // 👉 Encabezados
-    await googleSheets.setHeaders(SPREADSHEET_CONFIG.SHEETS.RESERVAS, [
+    const headers = [
       "Cancha",
       "Cliente",
       "Fecha",
@@ -27,26 +27,32 @@ export async function syncReservas(reservas: Reserva[]) {
       "Precio Base",
       "Extras",
       "Comentarios"
-    ]);
+    ];
 
-    // 👉 Filas
-    for (const r of reservas) {
+    // 👉 Convertimos reservas a filas
+    const rows = reservas.map(r => {
       const extras = r.extras.length
         ? r.extras.map(e => `${e.nombre} x${e.cantidad}`).join(", ")
         : "";
 
-      await googleSheets.appendRow(SPREADSHEET_CONFIG.SHEETS.RESERVAS, [
+      return [
         getNombreCancha(r.cancha_id),
         r.cliente_nombre,
-        r.fecha, // si querés lo cambio a DD/MM/YYYY
+        r.fecha,
         r.hora_inicio,
         r.hora_fin,
         r.metodo_pago,
         r.precio_base,
         extras,
         r.seña ?? ""
-      ]);
-    }
+      ];
+    });
+
+    // 👉 Sobrescribimos todo en la hoja "reservas"
+    await googleSheets.overwriteSheet(SPREADSHEET_CONFIG.SHEETS.RESERVAS, [
+      headers,
+      ...rows
+    ]);
 
     console.log(`✅ ${reservas.length} reservas sincronizadas a Google Sheets`);
   } catch (error) {
